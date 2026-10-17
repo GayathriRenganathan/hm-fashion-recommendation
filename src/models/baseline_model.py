@@ -1,6 +1,6 @@
 """
 This module provides simple baseline recommenders for benchmarking, including global popularity,
-temporal popularity, and random recommenders.
+recent popularity.
 
 """
 
@@ -45,3 +45,48 @@ def create_baseline_recommender(train: pd.DataFrame) -> Callable:
         })
     
     return baseline
+
+def create_recency_baseline(train: pd.DataFrame) -> Callable:
+    """
+    Create a temporal baseline recommender based on recent popularity.
+    
+    Args:
+        train (pd.DataFrame): Training data DataFrame containing 't_dat' and 'article_id'.
+        
+    Returns:
+        Callable: Function that generates recommendations based on recent popularity.
+    """
+    train = train.copy()
+    train['t_dat'] = pd.to_datetime(train['t_dat'])
+    last_date = train['t_dat'].max()
+    
+    days_diff = (last_date - train['t_dat']).dt.days
+    train["time_decay"] = 1 / (1 + days_diff)
+
+    # Compute sum of time-decayed weights per article
+    top_temporal = (
+        train.groupby("article_id")["time_decay"]
+        .sum()
+        .sort_values(ascending=False)
+        .index
+        .tolist()
+    )
+    
+    def recency_recommender(customers: List[str], k: int = 12) -> pd.DataFrame:
+        """
+        Generate recommendations for a list of customers using recent popularity.
+        
+        Args:
+            customers (List[str]): List of customer IDs.
+            k (int): Number of recommendations per customer.
+            
+        Returns:
+            pd.DataFrame: Recommendation table with customer_id, rank, and article_id.
+        """
+        return pd.DataFrame({
+            "customer_id": [customer for customer in customers for _ in range(k)],
+            "rank": list(range(1, k+1)) * len(customers),
+            "article_id": top_temporal[:k] * len(customers)
+        })
+    
+    return recency_recommender
