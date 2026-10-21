@@ -219,3 +219,4 @@ __marimo__/
 
 # Ignore input data folder
 input/
+saved_models/
