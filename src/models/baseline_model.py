@@ -57,7 +57,6 @@ def create_recency_baseline(train: pd.DataFrame) -> Callable:
         Callable: Function that generates recommendations based on recent popularity.
     """
     train = train.copy()
-    train['t_dat'] = pd.to_datetime(train['t_dat'])
     last_date = train['t_dat'].max()
     
     days_diff = (last_date - train['t_dat']).dt.days

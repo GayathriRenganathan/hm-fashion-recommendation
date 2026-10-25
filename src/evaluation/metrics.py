@@ -155,3 +155,18 @@ def evaluate_all(recommender: Callable, test: pd.DataFrame, k: int = 12) -> Dict
         f"NDCG@{k}": ndcg_at_k(pred_matrix, actuals, customers, k),
         f"Recall@{k}": recall_at_k(pred_matrix, actuals, customers, k)
     }
+    
+    
+def evaluate_candidates(preds_df, test_df, k=100):   
+    
+    # 2. Add sequential rank so your preparation script doesn't throw a KeyError
+    if not preds_df.empty and 'rank' not in preds_df.columns:
+        preds_df['rank'] = preds_df.groupby('customer_id').cumcount() + 1
+        
+    print("Preparing evaluation matrices...")
+    customers, actuals, pred_matrix = _prepare_eval_data(preds_df, test_df, k)
+    
+    # 3. Compute Recall@K using your existing function
+    score = recall_at_k(pred_matrix, actuals, customers, k)
+    print(f"Recall@{k}: {score:.4f}")
+    return score

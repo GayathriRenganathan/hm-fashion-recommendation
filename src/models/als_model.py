@@ -39,7 +39,6 @@ def train_als_model(
     print("3. Reverse item map shape:", len(reverse_item_map))
 
     train = train.copy()
-    train['t_dat'] = pd.to_datetime(train['t_dat'])
     train['user_idx'] = train['customer_id'].map(user_map)
     train['item_idx'] = train['article_id'].map(item_map)
 
@@ -129,8 +128,11 @@ def create_als_recommender(
 
         for customer in customers:
             if customer not in user_map:
-                # Use baseline for cold start
-                recs = baseline([customer], k=k)['article_id'].tolist()
+                if baseline is not None:
+                    # Use baseline for cold start
+                    recs = baseline([customer], k=k)['article_id'].tolist()
+                else:
+                    recs = []
             else:
                 user_idx = user_map[customer]
                 recommended = als_model.recommend(
@@ -142,8 +144,8 @@ def create_als_recommender(
                 recs = [int(reverse_item_map[int(item_idx)]) for item_idx in recommended[0]]
 
             recommendations.extend(recs)
-            customer_ids.extend([customer] * k)
-            ranks.extend(range(1, k + 1))
+            customer_ids.extend([customer] * len(recs))
+            ranks.extend(range(1, len(recs) + 1))
 
         return pd.DataFrame({
             "customer_id": customer_ids,
