@@ -44,30 +44,30 @@ def train_als_model(
 
     last_date = train['t_dat'].max()
     days_diff = (last_date - train['t_dat']).dt.days
-    train["time_decay"] = alpha / (1 + days_diff)
+    train["time_decay"] = 1.0 / (1 + days_diff)
     
     purchase_counts = train.groupby(['user_idx', 'item_idx'])["time_decay"].sum().reset_index(name='count')
 
     # User-Item sparse matrix
-    item_user_matrix  = sp.coo_matrix(
+    user_item_matrix  = sp.coo_matrix(
         (purchase_counts['count'].astype(np.float32),
             (purchase_counts['user_idx'], purchase_counts['item_idx'])),
         shape=(len(user_map), len(item_map))
     ).tocsr()
-
     # Train ALS model
     als_model = AlternatingLeastSquares(
         factors=factors,
         regularization=regularization,
         iterations=iterations,
-        random_state=random_seed
+        random_state=random_seed,
+        alpha=alpha
     )
     
     print("Training Implicit ALS model...")
-    als_model.fit(item_user_matrix, show_progress=True)
+    als_model.fit(user_item_matrix, show_progress=True)
     print("Training complete!")
     
-    return als_model, user_map, item_map, reverse_item_map, item_user_matrix
+    return als_model, user_map, item_map, reverse_item_map, user_item_matrix
 
 
 def create_als_recommender(
@@ -82,7 +82,7 @@ def create_als_recommender(
     user_map: Dict[str, int] = None,
     item_map: Dict[str, int] = None,
     reverse_item_map: Dict[int, str] = None,
-    item_user_matrix: sp.csr_matrix = None
+    user_item_matrix: sp.csr_matrix = None
 ) -> Callable:
     """
     Create an ALS-based recommender function.
@@ -102,7 +102,7 @@ def create_als_recommender(
         Callable: Function that generates recommendations using ALS model.
     """
     if als_model is None:
-        als_model, user_map, item_map, reverse_item_map, item_user_matrix = train_als_model(
+        als_model, user_map, item_map, reverse_item_map, user_item_matrix = train_als_model(
             train,
             factors,
             iterations,
@@ -137,11 +137,11 @@ def create_als_recommender(
                 user_idx = user_map[customer]
                 recommended = als_model.recommend(
                     user_idx,
-                    item_user_matrix[user_idx],
+                    user_item_matrix[user_idx],
                     N=k,
                     filter_already_liked_items=False
                 )
-                recs = [int(reverse_item_map[int(item_idx)]) for item_idx in recommended[0]]
+                recs = [str(reverse_item_map[int(item_idx)]) for item_idx in recommended[0]]
 
             recommendations.extend(recs)
             customer_ids.extend([customer] * len(recs))

@@ -61,11 +61,11 @@ class ALSCandidates:
             user_map = model_artifact['user_map']
             item_map = model_artifact['item_map']
             reverse_item_map = model_artifact['reverse_item_map']
-            item_user_matrix = model_artifact['item_user_matrix']
+            user_item_matrix = model_artifact['user_item_matrix']
             print("ALS model successfully loaded from cache!")
         else:
             print("Training ALS model from scratch...")
-            als_model, user_map, item_map, reverse_item_map, item_user_matrix = train_als_model(
+            als_model, user_map, item_map, reverse_item_map, user_item_matrix = train_als_model(
                 train=history,
                 factors=self.factors,
                 iterations=self.iterations,
@@ -80,7 +80,7 @@ class ALSCandidates:
                 'user_map': user_map,               
                 'item_map': item_map,               
                 'reverse_item_map': reverse_item_map,
-                'item_user_matrix': item_user_matrix, 
+                'user_item_matrix': user_item_matrix, 
             }
 
             with open(als_file_path, 'wb') as f:
@@ -100,7 +100,7 @@ class ALSCandidates:
             user_map=user_map,
             item_map=item_map,
             reverse_item_map=reverse_item_map,
-            item_user_matrix=item_user_matrix
+            user_item_matrix=user_item_matrix
         )
 
     def generate(self, users: list) -> pd.DataFrame:
