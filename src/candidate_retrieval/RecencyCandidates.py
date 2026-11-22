@@ -11,27 +11,28 @@ class RecencyCandidates:
         self.recommender_func = None
         
         # Initial fit on full data
-        self._update_recommender(transactions)
+        self._update_recommender()
 
 
-    def _update_recommender(self, history: pd.DataFrame) -> None:
+    def _update_recommender(self) -> None:
         
         history = self.transactions[
-            (self.transactions["week"] < self.lookback_weeks) 
+            (self.transactions["week"] <= self.lookback_weeks) 
         ].copy()
         
         if history.empty:
-            self.recommender_func = lambda customers, k: pd.DataFrame(columns=["customer_id", "article_id", "rank"])
+            self.recommender_func = lambda customers, k: pd.DataFrame(columns=["customer_id", "article_id"])
         else:
             self.recommender_func = create_recency_baseline(history)
 
     def generate(self, users: List[str]) -> pd.DataFrame:
         if len(users) == 0 or self.recommender_func is None:
-            return pd.DataFrame(columns=["customer_id", "article_id", "rank"])
+            return pd.DataFrame(columns=["customer_id", "article_id"])
             
         df = self.recommender_func(users, k=self.k)
         # Drop the local rank column 
         if "rank" in df.columns:
             df = df.drop(columns=["rank"])
-            
+        
+        print("Generated recency candidates")
         return df

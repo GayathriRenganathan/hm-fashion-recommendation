@@ -3,6 +3,8 @@ import numpy as np
 import scipy.sparse as sp
 from implicit.als import AlternatingLeastSquares
 from typing import Dict, Callable, List
+from pathlib import Path
+import pickle
 
 def train_als_model(
     train: pd.DataFrame,
@@ -26,7 +28,9 @@ def train_als_model(
     Returns:
         als_model, user_map, item_map, reverse_item_map, item_user_matrix
     """
-
+    if train.empty:
+        raise ValueError("Training data cannot be empty.")
+    
     user_ids = train['customer_id'].unique()
     item_ids = train['article_id'].unique()
 
@@ -69,6 +73,48 @@ def train_als_model(
     
     return als_model, user_map, item_map, reverse_item_map, user_item_matrix
 
+def train_and_save_als_model(
+    train: pd.DataFrame,
+    model_path: Path,
+    lookback_weeks: int = 12,
+    factors: int = 100,
+    iterations: int = 15,
+    regularization: float = 0.01,
+    alpha: float = 40.0,
+    random_seed: int = 42
+):
+    history = train[train["week"] <= lookback_weeks].copy()
+    if history.empty:
+        raise ValueError(
+            f"No transactions found for lookback period: {lookback_weeks}"
+        )
+    als_model, user_map, item_map, reverse_item_map, user_item_matrix = (
+        train_als_model(
+            train=history,
+            factors=factors,
+            iterations=iterations,
+            regularization=regularization,
+            alpha=alpha,
+            random_seed=random_seed
+        )
+    )
+
+    model_artifact = {
+        "model": als_model,
+        "user_map": user_map,
+        "item_map": item_map,
+        "reverse_item_map": reverse_item_map,
+        "user_item_matrix": user_item_matrix
+    }
+
+    model_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(model_path, "wb") as f:
+        pickle.dump(model_artifact, f)
+
+    print(f"ALS model saved to {model_path}")
+
+    return model_artifact
 
 def create_als_recommender(
     train: pd.DataFrame = None,

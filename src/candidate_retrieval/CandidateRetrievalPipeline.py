@@ -19,6 +19,7 @@ class CandidateGeneratorEnsemble(BaseCandidateGenerator):
         
         # Instantiate each generator with its configuration parameters
         self.generators = {}
+        
         for name, (generator_class, kwargs) in generators.items():
             self.generators[name] = generator_class(transactions, articles, **kwargs)
 
@@ -33,11 +34,17 @@ class CandidateGeneratorEnsemble(BaseCandidateGenerator):
         for name, generator in self.generators.items():
             new_recs = generator.generate(users)
             if new_recs is not None and not new_recs.empty:
-                all_recommendations = pd.concat([all_recommendations, new_recs])
+                new_recs = new_recs.copy()
+                new_recs['source'] = name
+                all_recommendations = pd.concat([all_recommendations, new_recs], ignore_index=True)
 
-
+        deduped = all_recommendations.drop_duplicates(
+                    subset=['customer_id', 'article_id'], 
+                    keep='first'
+                ).reset_index(drop=True)
+        
         #Sort by customer_id
-        all_recommendations = all_recommendations.sort_values(by="customer_id",ascending=False)
-
+        final_recommendations = deduped.sort_values(by="customer_id",ascending=False)
+        
         # Deduplicate, keeping the first occurrence (respects generator registration order)
-        return all_recommendations.drop_duplicates().reset_index(drop=True)
+        return final_recommendations
