@@ -2,10 +2,11 @@ import os
 import pickle
 import pandas as pd
 from typing import Callable, Optional
+from candidate_retrieval.BaseCandidateGenerator import BaseCandidateGenerator
 from src.models.als_model import create_als_recommender
 from pathlib import Path
 
-class ALSCandidates:
+class ALSCandidates(BaseCandidateGenerator):
     def __init__(
         self, 
         transactions: pd.DataFrame,
@@ -14,6 +15,7 @@ class ALSCandidates:
         k: int = 40,
         baseline: Optional[Callable] = None
     ):
+        super().__init__(transactions, articles)
         self.k = k
         if not model_path.exists():
             raise FileNotFoundError(

@@ -7,4 +7,5 @@ jupyter
 #ALS model dependencies
 implicit
 
+# Ranker model dependencies
 lightgbm

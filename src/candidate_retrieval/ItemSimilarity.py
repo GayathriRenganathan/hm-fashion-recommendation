@@ -26,13 +26,11 @@ class ItemSimilarityCandidates(BaseCandidateGenerator):
         articles: pd.DataFrame,
         lookback_weeks: int = 12,
         min_item_frequency: int = 5,  # Drop items bought by fewer than N users
-        neighbors: int = 10,
         k: int = 30,
     ):
         super().__init__(transactions, articles)
         self.lookback_weeks = lookback_weeks
         self.min_item_frequency = min_item_frequency
-        self.neighbors = neighbors
         self.k = k
 
     def generate(self, users: List[str]) -> pd.DataFrame:
@@ -69,41 +67,6 @@ class ItemSimilarityCandidates(BaseCandidateGenerator):
         item_cooc = user_item_matrix.T.dot(user_item_matrix)
         item_cooc.setdiag(0)
         item_cooc.eliminate_zeros()
-
-        # # Keep only top-N neighbors for each item
-        # pruned_indices = []
-        # pruned_data = []
-        # pruned_indptr = [0]
-
-        # for i in range(n_items):
-        #     start = item_cooc.indptr[i]
-        #     end = item_cooc.indptr[i + 1]
-
-        #     row_indices = item_cooc.indices[start:end]
-        #     row_data = item_cooc.data[start:end]
-
-        #     if len(row_data) > self.neighbors:
-        #         top_idx = np.argpartition(
-        #             row_data, -self.neighbors
-        #         )[-self.neighbors:]
-
-        #         row_indices = row_indices[top_idx]
-        #         row_data = row_data[top_idx]
-
-        #     pruned_indices.extend(row_indices)
-        #     pruned_data.extend(row_data)
-        #     pruned_indptr.append(len(pruned_indices))
-
-        # item_cooc = csr_matrix(
-        #     (
-        #         np.asarray(pruned_data, dtype=np.float32),
-        #         np.asarray(pruned_indices, dtype=np.int32),
-        #         np.asarray(pruned_indptr, dtype=np.int32)
-        #     ),
-        #     shape=(n_items, n_items)
-        # )
-
-        # print(f"Pruned item-item relationships to top {self.neighbors} neighbors")
 
         # Map target users to internal indices
         user_map = {uid: idx for idx, uid in enumerate(user_uniques)}

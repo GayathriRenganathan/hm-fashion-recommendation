@@ -1,11 +1,12 @@
 import pandas as pd
 from typing import List
+
+from candidate_retrieval.BaseCandidateGenerator import BaseCandidateGenerator
 from ..models.baseline_model import create_recency_baseline  
 
-class RecencyCandidates:
+class RecencyCandidates(BaseCandidateGenerator):
     def __init__(self, transactions: pd.DataFrame, articles: pd.DataFrame, lookback_weeks: int = 12, k: int = 20):
-        self.transactions = transactions
-        self.articles = articles
+        super().__init__(transactions, articles)
         self.lookback_weeks = lookback_weeks
         self.k = k
         self.recommender_func = None
