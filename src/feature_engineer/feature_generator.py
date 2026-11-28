@@ -3,17 +3,17 @@ import numpy as np
 
 class FeatureGenerator:
     def __init__(self, train_transactions_df, articles_df=None, customers_df=None):
-        self.tx = train_transactions_df.copy()
+        self.tx = train_transactions_df[['customer_id', 'article_id', 'week']].copy()
         self.articles_df = articles_df
         self.customers_df = customers_df
-        if self.articles_df is not None:
-            cols_to_merge = [c for c in ['article_id', 'department_no', 'product_type_no'] if c in self.articles_df.columns]
-            if cols_to_merge:
-                self.tx = self.tx.merge(
-                    self.articles_df[cols_to_merge].drop_duplicates(), 
-                    on='article_id', 
-                    how='left'
-                )
+        # if self.articles_df is not None:
+        #     cols_to_merge = [c for c in ['article_id', 'department_no', 'product_type_no'] if c in self.articles_df.columns]
+        #     if cols_to_merge:
+        #         self.tx = self.tx.merge(
+        #             self.articles_df[cols_to_merge].drop_duplicates(), 
+        #             on='article_id', 
+        #             how='left'
+        #         )
 
     def add_item_features(self, df):
         """Merges article metadata and multi-window rolling popularities."""
@@ -88,24 +88,68 @@ class FeatureGenerator:
         print("-> Adding user-item interaction affinity features...")
         
         # Exact repeat purchase check: Has this user bought this exact article before?
-        user_article_history = self.tx[['customer_id', 'article_id']].drop_duplicates()
-        user_article_history['user_bought_article_before'] = 1
+        user_article_history = self.tx[['customer_id', 'article_id']].drop_duplicates().assign(user_bought_article_before=1)
         
         df = df.merge(user_article_history, on=['customer_id', 'article_id'], how='left')
         df['user_bought_article_before'] = df['user_bought_article_before'].fillna(0).astype(int)
 
         # Category affinity: How many times has this user bought items from this department/product_type?
-        if 'department_no' in df.columns and 'department_no' in self.tx.columns:
-            # Merge department into transactions temporarily if not already there
-            user_dept_pref = self.tx.groupby(['customer_id', 'department_no']).size().reset_index(name='user_dept_purchase_count')
-            df = df.merge(user_dept_pref, on=['customer_id', 'department_no'], how='left')
-            df['user_dept_purchase_count'] = df['user_dept_purchase_count'].fillna(0)
-        # Product Type affinity 
-        if 'product_type_no' in df.columns and 'product_type_no' in self.tx.columns:
-            user_pt_pref = self.tx.groupby(['customer_id', 'product_type_no']).size().reset_index(name='user_product_type_purchase_count')
-            df = df.merge(user_pt_pref, on=['customer_id', 'product_type_no'], how='left')
-            df['user_product_type_purchase_count'] = df['user_product_type_purchase_count'].fillna(0)
+        # if 'department_no' in df.columns and 'department_no' in self.tx.columns:
+        #     # Merge department into transactions temporarily if not already there
+        #     user_dept_pref = self.tx.groupby(['customer_id', 'department_no']).size().reset_index(name='user_dept_purchase_count')
+        #     df = df.merge(user_dept_pref, on=['customer_id', 'department_no'], how='left')
+        #     df['user_dept_purchase_count'] = df['user_dept_purchase_count'].fillna(0)
+        # # Product Type affinity 
+        # if 'product_type_no' in df.columns and 'product_type_no' in self.tx.columns:
+        #     user_pt_pref = self.tx.groupby(['customer_id', 'product_type_no']).size().reset_index(name='user_product_type_purchase_count')
+        #     df = df.merge(user_pt_pref, on=['customer_id', 'product_type_no'], how='left')
+        #     df['user_product_type_purchase_count'] = df['user_product_type_purchase_count'].fillna(0)
 
+
+        # Category affinity using article ID mappings
+        if self.articles_df is not None:
+
+            article_categories = (self.articles_df[['article_id', 'department_no', 'product_type_no']]
+                .drop_duplicates('article_id')
+                .set_index('article_id')
+            )
+
+            # Department preference
+            if 'department_no' in df.columns:
+                dept_mapping = self.tx['article_id'].map(article_categories['department_no'])
+
+                user_dept_pref = (
+                    pd.DataFrame({
+                        'customer_id': self.tx['customer_id'],
+                        'department_no': dept_mapping
+                    })
+                    .dropna(subset=['department_no'])
+                    .groupby(['customer_id', 'department_no'])
+                    .size()
+                    .reset_index(name='user_dept_purchase_count')
+                )
+
+                df = df.merge(user_dept_pref, on=['customer_id', 'department_no'], how='left')
+                df['user_dept_purchase_count'] = (df['user_dept_purchase_count'].fillna(0))
+
+            # Product type preference
+            if 'product_type_no' in df.columns:
+                pt_mapping = self.tx['article_id'].map(article_categories['product_type_no'])
+
+                user_pt_pref = (
+                    pd.DataFrame({
+                        'customer_id': self.tx['customer_id'],
+                        'product_type_no': pt_mapping
+                    })
+                    .dropna(subset=['product_type_no'])
+                    .groupby(['customer_id', 'product_type_no'])
+                    .size()
+                    .reset_index(name='user_product_type_purchase_count')
+                )
+
+                df = df.merge(user_pt_pref, on=['customer_id', 'product_type_no'], how='left')
+                df['user_product_type_purchase_count'] = (df['user_product_type_purchase_count'].fillna(0))
+                
         return df  
 
 

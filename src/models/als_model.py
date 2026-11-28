@@ -73,6 +73,26 @@ def train_als_model(
     
     return als_model, user_map, item_map, reverse_item_map, user_item_matrix
 
+def get_recent_history(transactions, lookback_weeks: int = 12) -> pd.DataFrame:
+    """
+    Returns transactions within the specified lookback window.
+
+    Smaller week values represent more recent weeks.
+    The latest available week is determined dynamically.
+    """
+    if transactions.empty:
+        return transactions.copy()
+
+    if lookback_weeks is None:
+        return transactions.copy()
+
+    latest_week = transactions['week'].min()
+    end_week = latest_week + lookback_weeks - 1
+
+    return transactions[
+        transactions['week'].between(latest_week, end_week)
+    ].copy()
+
 def train_and_save_als_model(
     train: pd.DataFrame,
     model_path: Path,
@@ -83,7 +103,7 @@ def train_and_save_als_model(
     alpha: float = 40.0,
     random_seed: int = 42
 ):
-    history = train[train["week"] <= lookback_weeks].copy()
+    history = get_recent_history(train, lookback_weeks=lookback_weeks)
     if history.empty:
         raise ValueError(
             f"No transactions found for lookback period: {lookback_weeks}"

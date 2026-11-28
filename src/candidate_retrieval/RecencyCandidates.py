@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import List
 
-from candidate_retrieval.BaseCandidateGenerator import BaseCandidateGenerator
+from src.candidate_retrieval.BaseCandidateGenerator import BaseCandidateGenerator
 from ..models.baseline_model import create_recency_baseline  
 
 class RecencyCandidates(BaseCandidateGenerator):
@@ -17,10 +17,8 @@ class RecencyCandidates(BaseCandidateGenerator):
 
     def _update_recommender(self) -> None:
         
-        history = self.transactions[
-            (self.transactions["week"] <= self.lookback_weeks) 
-        ].copy()
-        
+        history = self.get_recent_history(self.lookback_weeks)
+
         if history.empty:
             self.recommender_func = lambda customers, k: pd.DataFrame(columns=["customer_id", "article_id"])
         else:

@@ -2,7 +2,7 @@ import os
 import pickle
 import pandas as pd
 from typing import Callable, Optional
-from candidate_retrieval.BaseCandidateGenerator import BaseCandidateGenerator
+from src.candidate_retrieval.BaseCandidateGenerator import BaseCandidateGenerator
 from src.models.als_model import create_als_recommender
 from pathlib import Path
 

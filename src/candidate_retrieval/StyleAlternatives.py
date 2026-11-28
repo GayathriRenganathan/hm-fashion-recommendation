@@ -78,9 +78,10 @@ class SameProductColorCandidates(BaseCandidateGenerator):
         )
 
     def generate(self, users: List[str]) -> pd.DataFrame:
-        user_tx = self.transactions[
-            self.transactions['customer_id'].isin(users) & 
-            (self.transactions['week'] <= self.lookback_weeks)
+        # Filter transactions to the lookback window and for the target users
+        filtered_history = self.get_recent_history(self.lookback_weeks)
+        user_tx = filtered_history[
+            filtered_history['customer_id'].isin(users) 
         ]
 
         if user_tx.empty:

@@ -35,9 +35,7 @@ class ItemSimilarityCandidates(BaseCandidateGenerator):
 
     def generate(self, users: List[str]) -> pd.DataFrame:
         # Filter transactions to the lookback window
-        history = self.transactions[
-            self.transactions["week"] <= self.lookback_weeks
-        ].copy()
+        history = self.get_recent_history(self.lookback_weeks)
 
         if history.empty:
             return pd.DataFrame(columns=["customer_id", "article_id"])

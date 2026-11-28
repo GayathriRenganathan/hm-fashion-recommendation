@@ -26,10 +26,10 @@ class PreviousPurchases(BaseCandidateGenerator):
         self.k = k
 
     def generate(self, users: List[str]) -> pd.DataFrame:
-        
-        filtered_history = self.transactions[
-            self.transactions['customer_id'].isin(users) & 
-            (self.transactions['week'] <= self.lookback_weeks)
+        # Retrieves the most recent unique purchases for the specified users.
+        filtered_history = self.get_recent_history(self.lookback_weeks)
+        filtered_history = filtered_history[
+            filtered_history['customer_id'].isin(users)
         ]
         
         # Sort by date (most recent first) 
